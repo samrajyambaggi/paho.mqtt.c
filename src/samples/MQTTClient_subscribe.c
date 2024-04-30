@@ -17,14 +17,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include<unistd.h>
-#include<fcntl.h> // for O_WRONLY function
+#include <unistd.h>
+#include <fcntl.h> // for O_WRONLY function
 #include "MQTTClient.h"
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+
 
 #define ADDRESS     "tcp://dev.rightech.io:1883"
 #define CLIENTID    "samrajyambaggi"
-#define TOPIC       "base/relay/led"
-#define PAYLOAD     "Hello World!"
+#define TOPIC       "base/relay/*"
+#define PAYLOAD     ""
 #define QOS         1
 #define TIMEOUT     10000L
 
@@ -43,23 +48,20 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
     printf("     topic: %s\n", topicName);
     printf("   message: %.*s\n", message->payloadlen, (char*)message->payload);
     char msg =*((char*)message->payload);
-    if(message=='N')
+    if(msg == 'N')
     {
 	   f=open("/sys/class/leds/user/brightness",O_WRONLY);
 	   write(f,"1",1);
-	   close(f);
+	   sleep(1);
     }
-    else if(message=='F')
+    else if(msg == 'F')
     {
-	    f=open("/sys/class/leds/user/brighness",O_WRONLY);
+	    f=open("/sys/class/leds/user/brightness",O_WRONLY);
 	    write(f,"0",1);
-	    close(f);
+	    sleep(1);
     }
-    MQTTClient_freeMessage(&message);
-    MQTTClient_free(topicName);
-    return 1;
+    close(f);
 }
-
 void connlost(void *context, char *cause)
 {
     printf("\nConnection lost\n");
@@ -95,7 +97,7 @@ int main(int argc, char* argv[])
         printf("Failed to connect, return code %d\n", rc);
         rc = EXIT_FAILURE;
         goto destroy_exit;
-    }
+  }
 
     printf("Subscribing to topic %s\nfor client %s using QoS%d\n\n"
            "Press Q<Enter> to quit\n\n", TOPIC, CLIENTID, QOS);
